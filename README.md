@@ -127,36 +127,71 @@ asta_build.match('A::B::C = 1')
 This can also be used against nodes in a RuboCop rule match:
 
 ```ruby
-# Saving the matcher as a constant allows for easier reuse if you use
-# autocorrect later, as well as giving a consistent theme across your
-# matchers.
-AST_MATCH = Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
+module RuboCop
+  module Cop
+    # Grouping name of the Cop
+    module Deprecations
+      # Name of the check
+      class AbcDeprecation < RuboCop::Cop::Cop
 
-# [...]
+      # RuboCop takes a default message for errors
+      MSG = '`A::B::C` is deprecated, use `D::E::F` instead.'
 
-# Node matches work with the node type you're planning to capture. In this
-# case we're trying to capture a `casgn` from the top type of the expression:
-#
-#     (casgn
-#       (const
-#         (const nil :A) :B) :C
-#       (int 1))
-#
-# RuboCop matchers are all on_(type of node) for method names.
-def on_casgn(node)
-  return false unless AST_MATCH.match(node)
-end
+      # Saving the matcher as a constant allows for easier reuse if you use
+      # autocorrect later, as well as giving a consistent theme across your
+      # matchers.
+      AST_MATCH = Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
 
-def autocorrect(node)
-  matches = AST_MATCH.match(node)
+      # [...]
 
-  # 1. Matches are wrapped in an Enumerator, as there can be multiple
-  # 2. Then the value you want may be in an S-Expression
-  # 3. An S-Expression can have multiple children, so it's returned as an Array
-  # 4. Getting the first value specifically gives us 1, the set value
-  #
-  #       [s()] -> s() -> [1]  ->  1
-  value = matches.first.children.first
+      # Node matches work with the node type you're planning to capture. In this
+      # case we're trying to capture a `casgn` from the top type of the expression:
+      #
+      #     (casgn
+      #       (const
+      #         (const nil :A) :B) :C
+      #       (int 1))
+      #
+      # RuboCop matchers are all on_(type of node) for method names.
+      def on_casgn(node)
+        # Unless our node matches that expression, bail out.
+        return false unless AST_MATCH.match(node)
+
+        # If it did, add an offense so RuboCop knows it's bad.
+        add_offense(node)
+      end
+
+      def autocorrect(node)
+        # RuboCop passes this function to a batch that runs all the given
+        # correctors for the code, hence returning a lambda here.
+        -> corrector {
+          matches = AST_MATCH.match(node)
+
+          # 1. Matches are wrapped in an Enumerator, as there can be multiple
+          # 2. Then the value you want may be in an S-Expression
+          # 3. An S-Expression can have multiple children, so it's returned as an Array
+          # 4. Getting the first value specifically gives us 1, the set value
+          #
+          #       [s()] -> s() -> [1]  ->  1
+          value = matches.first.children.first
+
+          # Now we could always use the actual s-expression from step 2 here
+          # with `matches.first.location.source`, which is handy when we're
+          # not dealing with only one integer.
+          new_code = "D::E::F = #{value}"
+
+          # You can use a few things here, like `insert_before` or after or
+          # other expressions. See the corrector source for more ideas:
+          #
+          #   https://github.com/rubocop-hq/rubocop/blob/master/lib/rubocop/cop/corrector.rb
+          #
+          # In this case we're replacing the entire node where it's expression is,
+          # or rather the entire thing, with our new code.
+          corrector.replace(node.location.expression, new_code)
+        }
+      end
+    end
+  end
 end
 ```
 
