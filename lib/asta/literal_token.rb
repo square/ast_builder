@@ -1,10 +1,8 @@
 module Asta
-  # Represents a literal token entity to avoid
-  # any quotation marks on inspect. Parser::AST
-  # will recursively call nodes, using `inspect`
-  # for anything that's not a `Node` type, so
-  # we can cheat to get the macro language in
-  # here!
+  # Represents a literal token entity to avoid any quotation marks on inspect.
+  # Parser::AST will recursively call nodes, using `inspect` for anything
+  # that's not a `Node` type, so we can cheat to get the macro language in
+  # here.
   class LiteralToken
     def initialize(string)
       @string = string

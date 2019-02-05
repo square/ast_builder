@@ -1,0 +1,1 @@
+require_relative 'shorthand_block_cop'
