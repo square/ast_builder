@@ -6,6 +6,12 @@ module Asta
   class Builder
     extend RuboCop::NodePattern::Macros
 
+    attr_reader :meta_methods
+
+    # NodePattern won't allow numbers in meta-method calls, so
+    # we need to have alpha characters instead.
+    ALPHA = ('a'..'zz').to_a
+
     # It can either work on a literal string or on a block
     #
     # @param s = nil [String]
@@ -17,6 +23,7 @@ module Asta
     #
     # @return [AstBuilder]
     def initialize(s = nil, &fn)
+      @meta_methods = {}
       @ast = s ? parse(s) : instance_eval(&fn)
     end
 
@@ -31,7 +38,7 @@ module Asta
     #   RuboCop compatible nodes, or meta-tokens defining
     #   `inspect` to allow for `NodePattern` interpolation
     #
-    # @return [type] [description]
+    # @return [RuboCop::AST::Node]
     def s_expression(type, *children)
       RuboCop::AST::Node.new(type, children)
     end
@@ -149,6 +156,75 @@ module Asta
       end
     end
 
+    # Checks to see if a given value matches a meta-method.
+    #
+    # In a normal NodePattern, this is a method which exists in the parent context or on the NodePattern itself. As
+    # these methods are rarely used outside of this context, they can be defined instead as anonymous functions
+    # using the additional flexibility of Asta's builder syntax:
+    #
+    # ```ruby
+    # assigns(:value, s(:str, matching(/abc/)))
+    # ```
+    #
+    # Now instead of having to specify these checks in an actual handler, or defining a method on the parent
+    # context, we can do so inline.
+    #
+    # These meta methods are then stored and defined on the generated NodePattern upon match time to ensure they're
+    # within scope.
+    #
+    # @param value = nil [#===]
+    #   Any value that responds to `===`, used to build off of the flexibility of the Ruby `case`
+    #   expression.
+    #
+    # @param &function [Proc]
+    #   A function used to match against. Note that this function _must_ have the proper arity or NodePattern will
+    #   reject it.
+    #
+    # @return [LiteralToken]
+    #   This returns a literal token instead of a string, as NodePattern expects it to be a bare word.
+    def matching(value = nil, &function)
+      called_function = function ? function : -> x { value === x }
+
+      # NodePattern will not accept numbers, so we have to use letters instead.
+      meta_name = "_meta_method_#{ALPHA[@meta_methods.size]}"
+
+      @meta_methods[meta_name] = called_function
+
+      # These macros start with the `#` symbol, making this intentional
+      literal("##{meta_name}")
+    end
+
+    alias mm matching
+
+    # This method will both use anonymous functions or values to match against and then capture the output.
+    #
+    # @see #matching
+    #
+    # @param value = nil [#===]
+    #   Any value that responds to `===`, used to build off of the flexibility of the Ruby `case`
+    #   expression.
+    #
+    # @param &function [Proc]
+    #   A function used to match against. Note that this function _must_ have the proper arity or NodePattern will
+    #   reject it.
+    #
+    # @return [LiteralToken]
+    def capture_matching(value = nil, &function)
+      capture(matching(value, &function))
+    end
+
+    alias cm capture_matching
+
+    # Coerces the builder into a RuboCop NodePattern and attempts to match another value against it.
+    #
+    # @param other [String, AST]
+    #   Either plaintext code or another AST to match against
+    #
+    # @return [nil]
+    #   There was no match
+    #
+    # @return [String]
+    #   The matched portion of the code
     def match(other)
       ast = other.is_a?(String) ? self.class.new(other).to_ast : other
       self.to_cop.match(ast)
@@ -160,7 +236,12 @@ module Asta
     # @return [RuboCop::NodePattern]
     #   RuboCop compatible Sexp
     def to_cop
-      RuboCop::NodePattern.new(self.to_s.gsub(/\bnil\b/, 'nil?'))
+      RuboCop::NodePattern.new(self.to_s.gsub(/\bnil\b/, 'nil?')).tap do |node_pattern|
+        # If there are any meta methods defined we bind them to the node pattern to match against
+        @meta_methods.each do |name, fn|
+          node_pattern.define_singleton_method(name, &fn)
+        end
+      end
     end
 
     # Returns the internal AST representation as-is

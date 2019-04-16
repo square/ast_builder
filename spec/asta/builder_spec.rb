@@ -123,6 +123,30 @@ RSpec.describe Asta::Builder do
     end
   end
 
+  describe '#matching' do
+    it 'will define a meta method on the builder and leave a literal token' do
+      ast = builder.matching(/abc/)
+
+      expect(ast.to_s).to eq <<~AST.chomp
+        #_meta_method_a
+      AST
+
+      expect(builder.meta_methods['_meta_method_a']).to be_a(Proc)
+    end
+  end
+
+  describe '#capture_matching' do
+    it 'will define a meta method on the builder and leave a literal token' do
+      ast = builder.capture_matching(/abc/)
+
+      expect(ast.to_s).to eq <<~AST.chomp
+        $#_meta_method_a
+      AST
+
+      expect(builder.meta_methods['_meta_method_a']).to be_a(Proc)
+    end
+  end
+
   describe '#match' do
     let(:fn) { proc { assigns(:a, capture_children) } }
     let(:string) { nil }
@@ -147,6 +171,24 @@ RSpec.describe Asta::Builder do
 
         expect(true_branch.children.first).to eq(1)
         expect(false_branch.children.first).to eq(2)
+      end
+    end
+
+    context 'With a captured meta method in the expression' do
+      context 'When given a block' do
+        let(:fn) { proc { assigns(:value, s(:str, capture_matching { |s| s.include?('abc') })) } }
+
+        it 'will capture the value of a string matching the condition' do
+          expect(builder.match('value = "abc123"')).to eq('abc123')
+        end
+      end
+
+      context 'When given a value' do
+        let(:fn) { proc { assigns(:value, s(:str, capture_matching(/abc/))) } }
+
+        it 'will capture the value of a string matching the condition' do
+          expect(builder.match('value = "abc123"')).to eq('abc123')
+        end
       end
     end
   end
