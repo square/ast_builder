@@ -43,10 +43,10 @@ module RuboCop
       #     (args $(...))
       #     (send $(...) $_))
       #
-      # Asta is purposely more verbose to make it easier to break apart,
+      # AstBuilder is purposely more verbose to make it easier to break apart,
       # comment, and read an expression. This also means they can be composed
       # and reused to build up more advanced matchers if need be.
-      AST_MATCH = Asta.build do
+      AST_MATCH = AstBuilder.build do
         # Look for a block call
         s(:block,
 

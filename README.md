@@ -1,6 +1,6 @@
-# Asta
+# AstBuilder
 
-Asta (AST Amended) is a tool to make it easier to work with and compose S-Expressions and other AST related tasks in Ruby.
+AstBuilder (AST Amended) is a tool to make it easier to work with and compose S-Expressions and other AST related tasks in Ruby.
 
 It relies heavily on RuboCop functionality, most notably of which the [`NodePattern`][0] meta-language for AST construction and matching.
 
@@ -8,27 +8,27 @@ It relies heavily on RuboCop functionality, most notably of which the [`NodePatt
 
 ### Build
 
-Asta supports direct strings, which is mostly done to generate ASTs more quickly from static strings.
+AstBuilder supports direct strings, which is mostly done to generate ASTs more quickly from static strings.
 
 ```ruby
-Asta.build('1 + 1')
+AstBuilder.build('1 + 1')
 ```
 
-The more typical usage for Asta involves passing it a block:
+The more typical usage for AstBuilder involves passing it a block:
 
 ```ruby
-Asta.build { s(:node_type, s(:child_node, '...')) }
-=> #<Asta::Builder:0x00007fe2fba18390 @ast=s(:node_type, s(:child_node, "..."))>
+AstBuilder.build { s(:node_type, s(:child_node, '...')) }
+=> #<AstBuilder::Builder:0x00007fe2fba18390 @ast=s(:node_type, s(:child_node, "..."))>
 ```
 
-Asta comes with several extensions to the standard `AST::Sexp` syntax's `s` method, as we'll be going over here.
+AstBuilder comes with several extensions to the standard `AST::Sexp` syntax's `s` method, as we'll be going over here.
 
 ### Expanded Nodes
 
 Ruby constant strings and code that's mostly static can be a bit cumbersome to write out:
 
 ```ruby
-puts Asta.build('A::B::C = 1')
+puts AstBuilder.build('A::B::C = 1')
 (casgn
   (const
     (const nil :A) :B) :C
@@ -39,18 +39,18 @@ puts Asta.build('A::B::C = 1')
 If you wanted to actually capture or use wildcards from [`NodePattern`][0] in that statement, it becomes more difficult:
 
 ```ruby
-puts Asta.build('A::B::C = ...')
-Asta::InvalidCode: The following node is invalid:
+puts AstBuilder.build('A::B::C = ...')
+AstBuilder::InvalidCode: The following node is invalid:
   'A::B::C = ...'
-from /Users/baweaver/Development/asta/lib/asta/builder.rb:189:in 'parse'
+from /Users/baweaver/Development/ast_builder/lib/ast_builder/builder.rb:189:in 'parse'
 ```
 
-Asta isn't quite smart enough to be able to tell the difference between a meta-character from [`NodePattern`][0] and a regular Ruby token. This is why the builder blocks are used, but in typical construction you would need to write out the expression by hand.
+AstBuilder isn't quite smart enough to be able to tell the difference between a meta-character from [`NodePattern`][0] and a regular Ruby token. This is why the builder blocks are used, but in typical construction you would need to write out the expression by hand.
 
-With Asta you can keep those larger nodes as normal Ruby:
+With AstBuilder you can keep those larger nodes as normal Ruby:
 
 ```ruby
-puts Asta.build { s(:casgn, expand('A::B'), :C, expand('1')) }
+puts AstBuilder.build { s(:casgn, expand('A::B'), :C, expand('1')) }
 (casgn
   (const
     (const nil :A) :B) :C
@@ -62,10 +62,10 @@ puts Asta.build { s(:casgn, expand('A::B'), :C, expand('1')) }
 
 If [`NodePattern`][0] tokens aren't valid Ruby, how does one evaluate them into an s-expression tree? `RuboCop::AST::Node`, when coercing to a `String`, will call `inspect` on items it doesn't know how to coerce.
 
-`Asta::LiteralToken` defines this in such a way to not have quotation marks, allowing for a psuedo-interpolation of the meta-language:
+`AstBuilder::LiteralToken` defines this in such a way to not have quotation marks, allowing for a psuedo-interpolation of the meta-language:
 
 ```ruby
-puts Asta.build { s(:casgn, expand('A::B'), :C, literal('...')) }
+puts AstBuilder.build { s(:casgn, expand('A::B'), :C, literal('...')) }
 (casgn
   (const
     (const nil :A) :B) :C ...)
@@ -74,10 +74,10 @@ puts Asta.build { s(:casgn, expand('A::B'), :C, literal('...')) }
 
 ### Captures
 
-If you want to capture a node, you would use `$` in NodePattern. In Asta we use `capture` to simulate the same:
+If you want to capture a node, you would use `$` in NodePattern. In AstBuilder we use `capture` to simulate the same:
 
 ```ruby
-puts Asta.build { s(:casgn, expand('A::B'), :C, capture(literal('...'))) }
+puts AstBuilder.build { s(:casgn, expand('A::B'), :C, capture(literal('...'))) }
 (casgn
   (const
     (const nil :A) :B) :C $...)
@@ -87,7 +87,7 @@ puts Asta.build { s(:casgn, expand('A::B'), :C, capture(literal('...'))) }
 There's the shorter version, `capture_children`, for this same task:
 
 ```ruby
-puts Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
+puts AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }
 (casgn
   (const
     (const nil :A) :B) :C $(...))
@@ -96,31 +96,31 @@ puts Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
 
 ### Matching
 
-An `Asta::Builder` can be coerced into a `RuboCop::NodePattern`, which can be used in the same fashion.
+An `AstBuilder::Builder` can be coerced into a `RuboCop::NodePattern`, which can be used in the same fashion.
 
 > Note: RuboCop has some slight inconsistencies with how it represents `nil`, which is why when
 > coercing to a RuboCop::NodePattern syntax they're replaced with `nil?`.
 
 ```ruby
-Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }.to_cop
+AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }.to_cop
 => #<RuboCop::NodePattern:0x00007fe2fca004d8>
 ```
 
-This means that you can use `match` just the same as you would on a `NodePattern`, but Asta surfaces this functionality as we'll see in the next section.
+This means that you can use `match` just the same as you would on a `NodePattern`, but AstBuilder surfaces this functionality as we'll see in the next section.
 
 ### match
 
-Asta can directly match by coercing its internal state into a NodePattern:
+AstBuilder can directly match by coercing its internal state into a NodePattern:
 
 ```ruby
-asta_build = Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
+ast_builder_build = AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }
 
-# Using Asta to build a quick AST mock:
-match_data = asta_build.match(Asta.build('A::B::C = 1').to_ast)
+# Using AstBuilder to build a quick AST mock:
+match_data = ast_builder_build.match(AstBuilder.build('A::B::C = 1').to_ast)
 => s(:int, 1)
 
 # Against a string:
-asta_build.match('A::B::C = 1')
+ast_builder_build.match('A::B::C = 1')
 => s(:int, 1)
 ```
 
@@ -140,7 +140,7 @@ module RuboCop
       # Saving the matcher as a constant allows for easier reuse if you use
       # autocorrect later, as well as giving a consistent theme across your
       # matchers.
-      AST_MATCH = Asta.build { s(:casgn, expand('A::B'), :C, capture_children) }
+      AST_MATCH = AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }
 
       # [...]
 
@@ -200,7 +200,7 @@ end
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'asta'
+gem 'ast_builder'
 ```
 
 And then execute:
@@ -209,7 +209,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install asta
+    $ gem install ast_builder
 
 ## Development
 
@@ -219,11 +219,11 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/square/asta. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+Bug reports and pull requests are welcome on GitHub at https://github.com/square/ast_builder. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 ## Code of Conduct
 
-Everyone interacting in the Asta project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/square/asta/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the AstBuilder project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/square/ast_builder/blob/master/CODE_OF_CONDUCT.md).
 
 [0]: https://www.rubydoc.info/gems/rubocop/RuboCop/NodePattern "RuboCop NodePattern"
 

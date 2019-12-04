@@ -1,5 +1,5 @@
-RSpec.describe Asta do
+RSpec.describe AstBuilder do
   it "has a version number" do
-    expect(Asta::VERSION).not_to be nil
+    expect(AstBuilder::VERSION).not_to be nil
   end
 end

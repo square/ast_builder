@@ -1,5 +1,5 @@
 require "bundler/setup"
-require "asta"
+require "ast_builder"
 
 require 'rubocop/rspec/support'
 

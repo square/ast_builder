@@ -1,11 +1,11 @@
-RSpec.describe Asta::Builder do
+RSpec.describe AstBuilder::Builder do
   let(:fn) { nil }
   let(:string) { '1 + 1' }
-  let(:builder) { Asta.build(string, &fn) }
+  let(:builder) { AstBuilder.build(string, &fn) }
 
   describe '.initialize' do
     it 'can initialize' do
-      expect(builder).to be_a(Asta::Builder)
+      expect(builder).to be_a(AstBuilder::Builder)
     end
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Asta::Builder do
     it 'can create a literal token for NodePattern matching' do
       token = builder.literal('...')
 
-      expect(token).to be_a(Asta::LiteralToken)
+      expect(token).to be_a(AstBuilder::LiteralToken)
       expect(token.inspect).to eq('...')
     end
   end

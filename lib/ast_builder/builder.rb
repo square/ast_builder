@@ -1,6 +1,6 @@
 require 'rubocop'
 
-module Asta
+module AstBuilder
   class InvalidCode < StandardError; end
 
   class Builder
@@ -160,7 +160,7 @@ module Asta
     #
     # In a normal NodePattern, this is a method which exists in the parent context or on the NodePattern itself. As
     # these methods are rarely used outside of this context, they can be defined instead as anonymous functions
-    # using the additional flexibility of Asta's builder syntax:
+    # using the additional flexibility of AstBuilder's builder syntax:
     #
     # ```ruby
     # assigns(:value, s(:str, matching(/abc/)))

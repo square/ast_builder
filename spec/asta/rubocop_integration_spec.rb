@@ -1,4 +1,4 @@
-RSpec.describe 'RuboCop Integration with Asta' do
+RSpec.describe 'RuboCop Integration with AstBuilder' do
   describe RuboCop::Lint::ShortHandBlock do
     subject(:cop) { described_class.new }
 
