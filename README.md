@@ -6,7 +6,7 @@ It relies heavily on RuboCop functionality, most notably of which the [`NodePatt
 
 ## Usage
 
-### Build
+### Building a Matcher
 
 AstBuilder supports direct strings, which is mostly done to generate ASTs more quickly from static strings.
 
@@ -23,7 +23,7 @@ AstBuilder.build { s(:node_type, s(:child_node, '...')) }
 
 AstBuilder comes with several extensions to the standard `AST::Sexp` syntax's `s` method, as we'll be going over here.
 
-### Expanded Nodes
+#### Expanded Nodes
 
 Ruby constant strings and code that's mostly static can be a bit cumbersome to write out:
 
@@ -58,7 +58,7 @@ puts AstBuilder.build { s(:casgn, expand('A::B'), :C, expand('1')) }
 => nil
 ```
 
-### Literal Tokens
+#### Literal Tokens
 
 If [`NodePattern`][0] tokens aren't valid Ruby, how does one evaluate them into an s-expression tree? `RuboCop::AST::Node`, when coercing to a `String`, will call `inspect` on items it doesn't know how to coerce.
 
@@ -72,7 +72,7 @@ puts AstBuilder.build { s(:casgn, expand('A::B'), :C, literal('...')) }
 => nil
 ```
 
-### Captures
+#### Captures
 
 If you want to capture a node, you would use `$` in NodePattern. In AstBuilder we use `capture` to simulate the same:
 
@@ -94,7 +94,39 @@ puts AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }
 => nil
 ```
 
-### Matching
+#### Matching
+
+`matching` will allow you to go beyond traditional [`NodePattern`][0] expressions and start inlining arbitrary functions to your matches, allowing more fine-grained control of matches.
+
+It supports both block functions and items responding to `===` like `Integer` and instances of `RegExp`:
+
+```ruby
+# Matching with a block
+builder = AstBuilder.build {
+  assigns(:value, s(:str, capture_matching { |s| s.length > 3 }))
+}
+
+builder.match('value = "abc123"')
+=> "abc123"
+
+# Non-matching block
+builder = AstBuilder.build {
+  assigns(:value, s(:str, capture_matching { |s| s.length > 6 }))
+}
+
+builder.match('value = "abc123"')
+=> nil
+
+# Matching with something that responds to `===`:
+builder = AstBuilder.build {
+  assigns(:value, s(:str, capture_matching(/^abc/)))
+}
+
+builder.match('value = "abc123"')
+=> "abc123"
+```
+
+### Matching Values and ASTs
 
 An `AstBuilder::Builder` can be coerced into a `RuboCop::NodePattern`, which can be used in the same fashion.
 
@@ -108,7 +140,7 @@ AstBuilder.build { s(:casgn, expand('A::B'), :C, capture_children) }.to_cop
 
 This means that you can use `match` just the same as you would on a `NodePattern`, but AstBuilder surfaces this functionality as we'll see in the next section.
 
-### match
+#### match
 
 AstBuilder can directly match by coercing its internal state into a NodePattern:
 
